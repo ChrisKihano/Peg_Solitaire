@@ -3,9 +3,11 @@ File: Peg_Solitare.py
 Author: Christopher Kihano
 Date: June 20 2022
 Description: Solver for peg solitaire game in a triangle format. Can create triangle boards that are triangle with
-             length n and any initial board configuration. Inspired by the peg solitaire game at Cracker Barrel.
+             length n and any initial board configuration. This solution uses a tree structure to split possible next
+             actions and allows for backtracking if a non-solution path has been taken. Inspired by the peg solitaire
+             game at Cracker Barrel.
 Further Improvements: Optimizations may include detection for symmetry to reduce computation. For example, in the
-                      default setup, there are two possible initial moves but they're symmetrical of each other. Any
+                      default setup, there are two possible initial moves, but they're symmetrical of each other. Any
                       solution of one would be a mirror copy of the other reducing the number of iterations by half.
 
                       Allowing for additional layouts of boards including a cross, triangle without tips, stars. These
@@ -13,6 +15,7 @@ Further Improvements: Optimizations may include detection for symmetry to reduce
 """
 
 import copy
+import random
 import time
 
 
@@ -67,12 +70,16 @@ class Hole:
             self.moves.append([pos+row+2, pos+2*(row+1)+3])
 
 
-def find_solutions(board, show_solutions=True):
+def find_solutions(board, stop_at_first_solution=True, show_all_solutions=False, random_path=False, count_moves=False):
     """Iterates using a tree structure to find all solutions for the given initial board. """
-    find_solutions.num_of_function_runs += 1
     moves = board.valid_moves()
     if len(moves) == 0:  # If there are no valid moves, no actions can be taken.
         return
+    if count_moves:
+        find_solutions.num_of_function_runs += 1
+        find_solutions.max_moves = max(find_solutions.max_moves, len(moves))
+    if random_path:
+        random.shuffle(moves)
     for move in moves:
         new_board = copy.deepcopy(board)
         # Add move to log
@@ -83,27 +90,31 @@ def find_solutions(board, show_solutions=True):
         new_board.holes[move[2]].has_peg = True
         # Check if end has been reached
         if len(new_board.route) == new_board.winSize:
-            if show_solutions:
+            if show_all_solutions or find_solutions.num_of_solutions == 0:
                 print(new_board.route)  # Shows the most recent solution
-            #print(find_solutions.num_of_solutions)  # Uncomment to ensure script is finding solutions, not stalled
             find_solutions.num_of_solutions += 1
             return
         # Try new board
-        find_solutions(new_board)
+        find_solutions(new_board, stop_at_first_solution, show_all_solutions, random_path, count_moves)
+        if stop_at_first_solution:
+            if find_solutions.num_of_solutions == 1:
+                return
     return
 
 
 if __name__ == '__main__':
     startTime = time.time()
     # Initialize a 5-sided board
-    tempBoard = Board(5)
+    tempBoard = Board(4)
     # Remove the peg indicated by the instructions
-    tempBoard.holes[0].has_peg = False
+    tempBoard.holes[1].has_peg = False
     # Begin solving
     find_solutions.num_of_solutions = 0
-    find_solutions.num_of_function_runs = 0
-    find_solutions(tempBoard, True)
+    #find_solutions.num_of_function_runs = 0
+    #find_solutions.max_moves = 0
+    find_solutions(tempBoard, stop_at_first_solution=True, show_all_solutions=True, random_path=True, count_moves=False)
     endTime = time.time()
-    print(find_solutions.num_of_solutions)
-    print(find_solutions.num_of_function_runs)
-    print(endTime-startTime)
+    #print("Solutions: " + str(find_solutions.num_of_solutions))
+    #print("Ends: " + str(find_solutions.num_of_function_runs))
+    print("Time Taken: " + str(endTime-startTime))
+    #print("Max Moves: " + str(find_solutions.max_moves))
